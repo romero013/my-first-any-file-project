@@ -54,3 +54,9 @@ def update_task(task_id, payload: TaskUpdateSchema):
 
     return task
 
+@app.delete("/task/{task_id}", response_model=list[Task], status_code=status.HTTP_204_NO_CONTENT)
+def delete_task(task_id):
+    for task in tasks:
+        if task.id == task_id:
+            tasks.remove(task)
+
