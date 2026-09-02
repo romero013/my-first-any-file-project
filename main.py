@@ -25,6 +25,10 @@ class Task(BaseModel):
 class TaskCreate(BaseModel):
     title: str
 
+class TaskUpdateSchema(BaseModel):
+    title : str | None = None
+    completed : bool | None = None
+
 tasks: list[Task] = []
 
 @app.get("/tasks", response_model=list[Task], status_code=status.HTTP_200_OK)
@@ -38,3 +42,15 @@ def create_task(payload: TaskCreate):
     task = Task(id=str(uuid4()), title=payload.title, completed=False)
     tasks.append(task)
     return task
+
+@app.patch("/tasks/{task_id}", response_model=list[Task], status_code=status.HTTP_200_OK)
+def update_task(task_id, payload: TaskUpdateSchema):
+    for task in tasks:
+        if task_id == task.id:
+            if payload:
+                task.title = payload.title
+            if payload.completed is not None:
+                task.completed = payload.completed
+
+    return task
+
