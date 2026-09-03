@@ -47,14 +47,14 @@ def create_task(payload: TaskCreate):
 def update_task(task_id, payload: TaskUpdateSchema):
     for task in tasks:
         if task_id == task.id:
-            if payload:
+            if payload.title is not None:
                 task.title = payload.title
             if payload.completed is not None:
                 task.completed = payload.completed
 
     return task
 
-@app.delete("/task/{task_id}", response_model=list[Task], status_code=status.HTTP_204_NO_CONTENT)
+@app.delete("/task/{task_id}", response_model=list[Task], status_code=status.HTTP_200_OK)
 def delete_task(task_id):
     for task in tasks:
         if task.id == task_id:
