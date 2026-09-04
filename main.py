@@ -16,6 +16,7 @@ app.add_middleware(
     allow_credentials=True,
 )
 
+#-----------------Модели задач-----------------
 class Task(BaseModel):
     """Модель задачи"""
     id: str
@@ -25,26 +26,33 @@ class Task(BaseModel):
 class TaskCreate(BaseModel):
     title: str
 
-class TaskUpdateSchema(BaseModel):
+class TaskUpdate(BaseModel):
     title : str | None = None
     completed : bool | None = None
 
+#---------------Модели категорий---------------
+class Category(BaseModel):
+    id: str
+    name: str
+
+
 tasks: list[Task] = []
+categories: list[Category] = []
 
 @app.get("/tasks", response_model=list[Task], status_code=status.HTTP_200_OK)
-def read_root():
+def read_root() -> list[Task]:
     """Получить список задач"""
     return tasks
 
 @app.post("/tasks", response_model=Task, status_code=status.HTTP_201_CREATED)
-def create_task(payload: TaskCreate):
+def create_task(payload: TaskCreate) -> Task:
     """Создать новую задачу"""
-    task = Task(id=str(uuid4()), title=payload.title, completed=False)
-    tasks.append(task)
-    return task
+    new_task = Task(id=str(uuid4()), title=payload.title, completed=False)
+    tasks.append(new_task)
+    return new_task
 
-@app.patch("/tasks/{task_id}", response_model=list[Task], status_code=status.HTTP_200_OK)
-def update_task(task_id, payload: TaskUpdateSchema):
+@app.patch("/tasks/{task_id}", response_model=Task, status_code=status.HTTP_200_OK)
+def update_task(task_id, payload: TaskUpdate) -> Task:
     for task in tasks:
         if task_id == task.id:
             if payload.title is not None:
@@ -54,9 +62,12 @@ def update_task(task_id, payload: TaskUpdateSchema):
 
     return task
 
-@app.delete("/task/{task_id}", response_model=list[Task], status_code=status.HTTP_200_OK)
-def delete_task(task_id):
+@app.delete("/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_task(task_id) -> None:
     for task in tasks:
         if task.id == task_id:
             tasks.remove(task)
 
+@app.get("/categories", status_code=status.HTTP_200_OK)
+def get_categories() -> list[Category]:
+    return categories
