@@ -35,6 +35,11 @@ class Category(BaseModel):
     id: str
     name: str
 
+class CategoryCreate(BaseModel):
+    name: str
+
+class CategoryUpdate(BaseModel):
+    name: str | None = None
 
 tasks: list[Task] = []
 categories: list[Category] = []
@@ -59,8 +64,7 @@ def update_task(task_id, payload: TaskUpdate) -> Task:
                 task.title = payload.title
             if payload.completed is not None:
                 task.completed = payload.completed
-
-    return task
+            return task
 
 @app.delete("/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_task(task_id) -> None:
@@ -68,6 +72,26 @@ def delete_task(task_id) -> None:
         if task.id == task_id:
             tasks.remove(task)
 
-@app.get("/categories", status_code=status.HTTP_200_OK)
+@app.get("/categories", response_model=list[Category], status_code=status.HTTP_200_OK)
 def get_categories() -> list[Category]:
     return categories
+
+@app.post("/categories", response_model=Category, status_code=status.HTTP_201_CREATED)
+def create_category(payload: CategoryCreate) -> Category:
+    new_category = Category(id=str(uuid4()), name=payload.name)
+    categories.append(new_category)
+    return new_category
+
+@app.patch("/categories/{category_id}", response_model=CategoryCreate, status_code=status.HTTP_200_OK)
+def update_category(category_id, payload: CategoryUpdate) -> Category:
+    for category in categories:
+        if category.id == category_id:
+            if category.name is not None:
+                category.name = payload.name
+            return category
+
+@app.delete("/categories/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_category(category_id) -> None:
+    for category in categories:
+        if category.id == category_id:
+            categories.remove(category)
