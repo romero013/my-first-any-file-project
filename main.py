@@ -1,5 +1,5 @@
 from uuid import uuid4
-from fastapi import FastAPI, status
+from fastapi import FastAPI, status, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -44,6 +44,7 @@ class CategoryUpdate(BaseModel):
 tasks: list[Task] = []
 categories: list[Category] = []
 
+#-----------------Ручки задач-----------------
 @app.get("/tasks", response_model=list[Task], status_code=status.HTTP_200_OK)
 def read_root() -> list[Task]:
     """Получить список задач"""
@@ -72,6 +73,7 @@ def delete_task(task_id) -> None:
         if task.id == task_id:
             tasks.remove(task)
 
+#---------------Ручки категорий---------------
 @app.get("/categories", response_model=list[Category], status_code=status.HTTP_200_OK)
 def get_categories() -> list[Category]:
     return categories
@@ -89,9 +91,14 @@ def update_category(category_id, payload: CategoryUpdate) -> Category:
             if category.name is not None:
                 category.name = payload.name
             return category
+    # Если цикл прошёл все категории и не нашёл нужную — бросаем ошибку
+    raise HTTPException(status_code=404, detail="Category not found")
 
 @app.delete("/categories/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_category(category_id) -> None:
     for category in categories:
         if category.id == category_id:
             categories.remove(category)
+            return None
+    # Если цикл прошёл все категории и не нашёл нужную — бросаем ошибку
+    raise HTTPException(status_code=404, detail="Category not found")
