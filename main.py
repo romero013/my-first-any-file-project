@@ -53,6 +53,11 @@ class TaskORM(Base):
     title: Mapped[str]
     completed: Mapped[bool] = mapped_column(default=False, server_default="false")
 
+class CategoryORM(Base):
+    __tablename__ = "categories"
+
+    name: Mapped[str]
+
 
 @asynccontextmanager
 async def lifespan (_: FastAPI):
@@ -142,8 +147,6 @@ def get_db():
 
 # Если не закрывать сессии — соединения накапливаются и БД перестаёт принимать новые подключения.
 
-
-
 def task_orm_to_model(task_orm: TaskORM) -> Task:
     return Task(id=task_orm.id, title=task_orm.title, completed=task_orm.completed)
 # TaskORM  — SQLAlchemy объект, "понимает" БД, умеет делать запросы
@@ -151,11 +154,16 @@ def task_orm_to_model(task_orm: TaskORM) -> Task:
 
 # FastAPI не умеет автоматически конвертировать TaskORM в JSON — нужно сначала превратить его в Pydantic-модель Task. Эта функция и делает такое преобразование.
 
+def category_orm_to_model(category_orm: CategoryORM) -> Category:
+    return Category(id=category_orm.id, name=category_orm.name)
+
 
 #-----------------Ручки задач-----------------
 @app.get("/tasks", status_code=status.HTTP_200_OK)
-def read_tasks(db: Session = Depends(get_db)) -> list[Task]: # Что делает Depends и Depends(get_db) и db: Session = Depends(get_db)? И для чего он нужен?
-#     Depends — механизм внедрения зависимостей в FastAPI. Говорит: "перед вызовом этой функции — сначала вызови get_db() и передай результат в параметр db"
+def read_tasks(db: Session = Depends(get_db)) -> list[Task]:
+# Depends — механизм внедрения зависимостей в FastAPI. 
+# Говорит: "перед вызовом этой функции — сначала вызови get_db() и передай результат в параметр db"
+
 # Запрос GET /tasks
 #       ↓
 # FastAPI видит Depends(get_db)
@@ -235,31 +243,36 @@ def delete_task(task_id, db: Session = Depends(get_db)) -> None:
 
 
 #---------------Ручки категорий---------------
-@app.get("/categories", response_model=list[Category], status_code=status.HTTP_200_OK)
-def get_categories() -> list[Category]:
-    return categories
+@app.get("/categories", status_code=status.HTTP_200_OK)
+def get_categories(db: Session = Depends(get_db)) -> list[Category]:
+    categories_from_db = db.scalars(select(CategoryORM)).all()
+    return [category_orm_to_model(category) for category in categories_from_db]
 
 @app.post("/categories", response_model=Category, status_code=status.HTTP_201_CREATED)
-def create_category(payload: CategoryCreate) -> Category:
-    new_category = Category(id=str(uuid4()), name=payload.name)
-    categories.append(new_category)
-    return new_category
+def create_category(payload: CategoryCreate, db: Session = Depends(get_db)) -> Category:
+    new_category = CategoryORM(name=payload.name)
+    db.add(new_category)
+    db.commit()
+    return category_orm_to_model(new_category)
 
 @app.patch("/categories/{category_id}", response_model=CategoryCreate, status_code=status.HTTP_200_OK)
-def update_category(category_id, payload: CategoryUpdate) -> Category:
-    for category in categories:
-        if category.id == category_id:
-            if category.name is not None:
-                category.name = payload.name
-            return category
-    # Если цикл прошёл все категории и не нашёл нужную — бросаем ошибку
-    raise HTTPException(status_code=404, detail="Category not found")
-
+def update_category(category_id, payload: CategoryUpdate, db: Session = Depends(get_db)) -> Category:
+    category_for_update = db.get(CategoryORM, category_id)
+    if category_for_update is None:
+        # Если цикл прошёл все категории и не нашёл нужную — бросаем ошибку
+        raise HTTPException(status_code=404, detail="Category not found")
+    if payload.name is not None:
+        category_for_update.name = payload.name
+    db.commit()
+    db.refresh(category_for_update)
+    return category_for_update
+    
 @app.delete("/categories/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_category(category_id) -> None:
-    for category in categories:
-        if category.id == category_id:
-            categories.remove(category)
-            return None
-    # Если цикл прошёл все категории и не нашёл нужную — бросаем ошибку
-    raise HTTPException(status_code=404, detail="Category not found")
+def delete_category(category_id, db: Session = Depends(get_db)) -> None:
+    category_for_delete = db.get(CategoryORM, category_id)
+    if category_for_delete is None:
+        # Если цикл прошёл все категории и не нашёл нужную — бросаем ошибку
+        raise HTTPException(status_code=404, detail="Category not found")
+    db.delete(category_for_delete)
+    db.commit()
+    
