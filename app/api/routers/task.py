@@ -104,6 +104,7 @@ def delete_task(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
         # Если задача не найдена — возвращаем 404
 
+
 @category_router.get("", status_code=status.HTTP_200_OK)
 def read_category(category_service: CategoryService = Depends(get_category_service)) -> list[CategorySchema]:
     return category_service.list_category()
@@ -127,6 +128,7 @@ def update_category(
         return category_service.update_category(category_id=category_id, category_update=payload)
     except TaskNotFound:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
 
 @category_router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_category(
