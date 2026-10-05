@@ -1,0 +1,43 @@
+   Project/
+├── app/
+│   ├── api/
+│   │   ├── routers/
+│   │   │   └── task.py       ← маршруты (ручки)
+│   │   └── dependencies.py   ← зависимости
+│   ├── core/
+│   │   └── config.py         ← настройки приложения
+│   ├── db/
+│   │   └── session.py        ← подключение к БД
+│   ├── models/
+│   │   ├── base.py           ← базовая ORM модель
+│   │   └── task.py           ← ORM модель задачи
+│   ├── repositories/
+│   │   └── task.py           ← работа с БД
+│   ├── schemas/
+│   │   └── task.py           ← Pydantic схемы
+│   ├── services/
+│   │   └── task.py           ← бизнес-логика
+│   └── main.py               ← точка входа
+
+
+Общая схема как всё связано
+
+HTTP Запрос от клиента
+        ↓
+   main.py (app)           ← точка входа, подключает роутеры
+        ↓
+routers/task.py            ← принимает запрос, валидирует данные
+        ↓
+dependencies.py            ← создаёт TaskService через Depends
+        ↓
+services/task.py           ← бизнес-логика (что делать?)
+        ↓
+repositories/task.py       ← работа с БД (как получить данные?)
+        ↓
+models/task.py             ← ORM модель (как выглядит таблица?)
+        ↓
+   PostgreSQL              ← база данных в Docker
+        ↑
+   session.py              ← управляет соединением
+        ↑
+   config.py               ← хранит DATABASE_URL
